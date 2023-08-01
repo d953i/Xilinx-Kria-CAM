@@ -4,7 +4,7 @@
 ########################### Project Configuration ##############################
 
 set CAMERA RPI-IMX219
-set CAMERA IAS-AR1335
+#set CAMERA IAS-AR1335
 
 set JTAG2AXI 1
 set EMMC 1
