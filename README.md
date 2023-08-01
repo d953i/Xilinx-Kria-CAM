@@ -1,4 +1,4 @@
-# Example design for different camera's on Xilinx Kria KV260 devkit
+# Example camera designs for Xilinx Kria KV260 devkit
 
 Complete ISP (Image Signal Processing) pipeline supported for Baremetal and Linux using opensource drivers from AMD (Xilinx).
 Tested in Linux (Ubuntu BaseP) using V4L2 subsystem with output to frame buffer and to filesystem.
