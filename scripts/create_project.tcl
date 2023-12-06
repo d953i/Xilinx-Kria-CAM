@@ -3,8 +3,8 @@
 
 ########################### Project Configuration ##############################
 
-set CAMERA RPI-IMX219
-#set CAMERA IAS-AR1335
+#set CAMERA RPI-IMX219
+set CAMERA IAS-AR1335
 
 set JTAG2AXI 1
 set EMMC 1
@@ -33,8 +33,8 @@ set Minor [lindex $NameFields end]
 puts stdout "Minor is $Minor"
 set ToolsVersion [version -short]
 
-if {[string compare [version -short] 2023.1] != 0} {
-    return -code error [format "Unsupported Vivado version. Try 2023.1"]
+if {[string compare [version -short] 2023.2] != 0} {
+    return -code error [format "Unsupported Vivado version. Try 2023.2"]
 }
 
 #### Project Local Variables - Don't touch ! ###################################
@@ -299,7 +299,7 @@ if {$::JTAG2AXI == 1} {
 
 ##### VIDEO PROCESSING PIPELINE ################################################
 
-create_bd_cell -type ip -vlnv xilinx.com:ip:mipi_csi2_rx_subsystem:5.3 mipi_csi2_rx_subsyst_0
+create_bd_cell -type ip -vlnv xilinx.com:ip:mipi_csi2_rx_subsystem:5.4 mipi_csi2_rx_subsyst_0
 
 create_bd_cell -type ip -vlnv xilinx.com:ip:axis_subset_converter:1.1 axis_subset_converter_0
 
@@ -313,7 +313,7 @@ set_property CONFIG.C_TOPOLOGY {3} [get_bd_cells v_proc_ss_0]
 create_bd_cell -type ip -vlnv xilinx.com:ip:v_proc_ss:2.3 v_proc_ss_1
 set_property -dict [list CONFIG.C_ENABLE_CSC {true} CONFIG.C_TOPOLOGY {0}] [get_bd_cells v_proc_ss_1]
 
-create_bd_cell -type ip -vlnv xilinx.com:ip:v_frmbuf_wr:2.4 v_frmbuf_wr_0
+create_bd_cell -type ip -vlnv xilinx.com:ip:v_frmbuf_wr:2.5 v_frmbuf_wr_0
 set_property -dict [list CONFIG.HAS_BGR8 {1} CONFIG.HAS_BGRX8 {1} CONFIG.HAS_RGBX8 {1} CONFIG.HAS_UYVY8 {1} \
     CONFIG.HAS_Y8 {1} CONFIG.HAS_YUV8 {1} CONFIG.HAS_YUVX8 {1} CONFIG.HAS_YUYV8 {1} \
     CONFIG.HAS_Y_UV8 {1} CONFIG.HAS_Y_UV8_420 {1} CONFIG.HAS_Y_U_V8 {1}] [get_bd_cells v_frmbuf_wr_0]
@@ -472,7 +472,7 @@ if {$::CAMERA == "RPI-IMX219"} {
       CONFIG.DATA_LANE0_IO_LOC {E5} CONFIG.DATA_LANE1_IO_LOC {G6} \
       CONFIG.DPHYRX_BOARD_INTERFACE {som240_1_connector_mipi_csi_raspi} CONFIG.DPY_LINE_RATE {912} \
       CONFIG.HP_IO_BANK_SELECTION {66} CONFIG.SupportLevel {1}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
-    
+   
     set_property -dict [list CONFIG.S_TDEST_WIDTH.VALUE_SRC USER CONFIG.M_HAS_TLAST.VALUE_SRC \
         USER CONFIG.S_HAS_TLAST.VALUE_SRC USER CONFIG.S_TUSER_WIDTH.VALUE_SRC \
         USER CONFIG.M_TUSER_WIDTH.VALUE_SRC USER CONFIG.M_TDATA_NUM_BYTES.VALUE_SRC \
@@ -494,6 +494,10 @@ if {$::CAMERA == "IAS-AR1335"} {
         CONFIG.DATA_LANE0_IO_LOC {A2} CONFIG.DATA_LANE1_IO_LOC {B3} CONFIG.DATA_LANE2_IO_LOC {B4} CONFIG.DATA_LANE3_IO_LOC {D4} \
         CONFIG.DPHYRX_BOARD_INTERFACE {som240_1_connector_mipi_csi_ias} CONFIG.DPY_LINE_RATE {1104} CONFIG.HP_IO_BANK_SELECTION {66} \
         CONFIG.C_EN_CSI_V2_0 {true} CONFIG.SupportLevel {1}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+
+    set_property CONFIG.C_CSI_EN_CRC {false} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+    #set_property CONFIG.C_CSI_EN_ACTIVELANES {true} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+
     
     set_property -dict [list CONFIG.S_TDATA_NUM_BYTES.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_converter_0]
     set_property -dict [list CONFIG.S_TDEST_WIDTH.VALUE_SRC USER CONFIG.M_HAS_TLAST.VALUE_SRC \
