@@ -5,6 +5,7 @@
 
 #set CAMERA RPI-IMX219
 set CAMERA IAS-AR1335
+set MODE 4K-UHD
 
 set JTAG2AXI 1
 set EMMC 1
@@ -48,7 +49,7 @@ puts stdout "srcRoot is ${srcRoot}"
 #return -code 1
 
 #set origin_dir "."
-set ProjectName Kria-${CAMERA}
+set ProjectName Kria-${CAMERA}_test
 set ProjectFolder $ProjectName
 set ProjectIPRepos ${srcRoot}/_ip_repos/
 
@@ -316,7 +317,7 @@ set_property -dict [list CONFIG.C_ENABLE_CSC {true} CONFIG.C_TOPOLOGY {0}] [get_
 create_bd_cell -type ip -vlnv xilinx.com:ip:v_frmbuf_wr:2.5 v_frmbuf_wr_0
 set_property -dict [list CONFIG.HAS_BGR8 {1} CONFIG.HAS_BGRX8 {1} CONFIG.HAS_RGBX8 {1} CONFIG.HAS_UYVY8 {1} \
     CONFIG.HAS_Y8 {1} CONFIG.HAS_YUV8 {1} CONFIG.HAS_YUVX8 {1} CONFIG.HAS_YUYV8 {1} \
-    CONFIG.HAS_Y_UV8 {1} CONFIG.HAS_Y_UV8_420 {1} CONFIG.HAS_Y_U_V8 {1}] [get_bd_cells v_frmbuf_wr_0]
+    CONFIG.HAS_Y_UV8 {1} CONFIG.HAS_Y_UV8_420 {1} CONFIG.HAS_Y_U_V8 {1} CONFIG.HAS_Y_U_V8_420 {1}] [get_bd_cells v_frmbuf_wr_0]
 
 make_bd_intf_pins_external  [get_bd_intf_pins mipi_csi2_rx_subsyst_0/mipi_phy_if]
 connect_bd_intf_net [get_bd_intf_pins mipi_csi2_rx_subsyst_0/video_out] [get_bd_intf_pins axis_subset_converter_0/S_AXIS]
@@ -493,18 +494,17 @@ if {$::CAMERA == "IAS-AR1335"} {
     set_property -dict [list CONFIG.CLK_LANE_IO_LOC {C1} CONFIG.CMN_NUM_LANES {4} CONFIG.CMN_PXL_FORMAT {RAW10} \
         CONFIG.DATA_LANE0_IO_LOC {A2} CONFIG.DATA_LANE1_IO_LOC {B3} CONFIG.DATA_LANE2_IO_LOC {B4} CONFIG.DATA_LANE3_IO_LOC {D4} \
         CONFIG.DPHYRX_BOARD_INTERFACE {som240_1_connector_mipi_csi_ias} CONFIG.DPY_LINE_RATE {1104} CONFIG.HP_IO_BANK_SELECTION {66} \
-        CONFIG.C_EN_CSI_V2_0 {true} CONFIG.SupportLevel {1}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+        CONFIG.SupportLevel {1}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
 
     set_property CONFIG.C_CSI_EN_CRC {false} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
-    #set_property CONFIG.C_CSI_EN_ACTIVELANES {true} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
-
+    set_property CONFIG.C_CSI_EN_ACTIVELANES {false} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
     
     set_property -dict [list CONFIG.S_TDATA_NUM_BYTES.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_converter_0]
     set_property -dict [list CONFIG.S_TDEST_WIDTH.VALUE_SRC USER CONFIG.M_HAS_TLAST.VALUE_SRC \
         USER CONFIG.S_HAS_TLAST.VALUE_SRC USER CONFIG.S_TUSER_WIDTH.VALUE_SRC \
         USER CONFIG.M_TUSER_WIDTH.VALUE_SRC USER CONFIG.M_TDATA_NUM_BYTES.VALUE_SRC \
      USER CONFIG.M_TDEST_WIDTH.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_converter_0]
-    set_property -dict [list CONFIG.S_TDATA_NUM_BYTES {2} CONFIG.TDATA_REMAP {tdata[9:2]}] [get_bd_cells ISP/axis_subset_converter_0]
+    
     
     set_property -dict [list CONFIG.M_HAS_TLAST {1} CONFIG.M_TDEST_WIDTH {10} CONFIG.M_TUSER_WIDTH {1} CONFIG.S_HAS_TLAST {1} \
         CONFIG.S_TDEST_WIDTH {10} CONFIG.S_TUSER_WIDTH {1} CONFIG.TDEST_REMAP {tdest[9:0]}] [get_bd_cells ISP/axis_subset_converter_0]
@@ -514,12 +514,48 @@ if {$::CAMERA == "IAS-AR1335"} {
     set_property -dict [list CONFIG.C_MAX_DATA_WIDTH {8} CONFIG.C_SAMPLES_PER_CLK {1} CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_proc_ss_0]
     set_property -dict [list CONFIG.C_MAX_DATA_WIDTH {8} CONFIG.C_SAMPLES_PER_CLK {1} CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_proc_ss_1]
     set_property -dict [list CONFIG.AXIMM_ADDR_WIDTH {64} CONFIG.SAMPLES_PER_CLOCK {1}  CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_frmbuf_wr_0]
+    set_property CONFIG.C_CSC_ENABLE_WINDOW {false} [get_bd_cells ISP/v_proc_ss_0]
+    set_property CONFIG.C_COLORSPACE_SUPPORT {2} [get_bd_cells ISP/v_proc_ss_0]
+    set_property CONFIG.C_COLORSPACE_SUPPORT {2} [get_bd_cells ISP/v_proc_ss_1]
     
     create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 ISP/xlslice_0
     set_property -dict [list CONFIG.DIN_FROM {6} CONFIG.DIN_TO {6} CONFIG.DIN_WIDTH {95}] [get_bd_cells ISP/xlslice_0]
     connect_bd_net [get_bd_pins ISP/Din] [get_bd_pins ISP/xlslice_0/Din]
     make_bd_pins_external  [get_bd_pins ISP/xlslice_0/Dout]
     set_property name IAS1_RST [get_bd_ports Dout_0]
+
+    if {$::MODE == "4K-UHD"} {
+
+        set_property -dict [list CONFIG.S_TDATA_NUM_BYTES {3} CONFIG.M_TDATA_NUM_BYTES {2}] [get_bd_cells ISP/axis_subset_converter_0]
+        set_property -dict [list CONFIG.TDATA_REMAP {tdata[19:12],tdata[9:2]}] [get_bd_cells ISP/axis_subset_converter_0]
+        
+        set_property CONFIG.C_CSI_FILTER_USERDATATYPE {true} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+        set_property CONFIG.CMN_NUM_PIXELS {2} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {2} CONFIG.CSI_BUF_DEPTH {4096}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {2} CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_demosaic_0]
+        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {2} CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_gamma_lut_0]
+        set_property -dict [list CONFIG.C_SAMPLES_PER_CLK {2} CONFIG.C_MAX_COLS {3840} CONFIG.C_MAX_ROWS {2160}] [get_bd_cells ISP/v_proc_ss_0]
+        set_property -dict [list CONFIG.C_SAMPLES_PER_CLK {2} CONFIG.C_MAX_COLS {3840} CONFIG.C_MAX_ROWS {2160}] [get_bd_cells ISP/v_proc_ss_1]
+        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {2}  CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_frmbuf_wr_0]
+        
+    } else {
+        
+        set_property -dict [list CONFIG.S_TDATA_NUM_BYTES {2} CONFIG.M_TDATA_NUM_BYTES {1}] [get_bd_cells ISP/axis_subset_converter_0]
+        set_property -dict [list CONFIG.TDATA_REMAP {tdata[9:2]}] [get_bd_cells ISP/axis_subset_converter_0]
+        
+        set_property CONFIG.C_CSI_FILTER_USERDATATYPE {false} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+        set_property -dict [list CONFIG.CSI_BUF_DEPTH {2048}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {1} CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_demosaic_0]
+        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {1} CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_gamma_lut_0]
+        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {1} CONFIG.C_MAX_COLS {3840} CONFIG.C_MAX_ROWS {2160}] [get_bd_cells ISP/v_proc_ss_0]
+        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {1} CONFIG.C_MAX_COLS {3840} CONFIG.C_MAX_ROWS {2160}] [get_bd_cells ISP/v_proc_ss_1]
+        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {1} CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_frmbuf_wr_0]
+        
+    }
+    
+
+
+    
 }
 
 assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs iic2cam/S_AXI/Reg] -force
