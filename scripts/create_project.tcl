@@ -4,8 +4,11 @@
 ########################### Project Configuration ##############################
 
 #set CAMERA RPI-IMX219
-set CAMERA IAS-AR1335
-set MODE 4K-UHD
+#set CAMERA IAS-AR1335
+set CAMERA ISP-AR1335
+
+set MODE FullHD
+#set MODE 4K-UHD
 
 set JTAG2AXI 1
 set EMMC 1
@@ -20,6 +23,8 @@ set BoardConnections {som240_1_connector xilinx.com:kv260_carrier:som240_1_conne
 set CAM_INTERFACE IAS
 if {$::CAMERA == "RPI-IMX219"} {
     set CAM_INTERFACE RPI 
+} elseif {$::CAMERA == "ISP-AR1335"} {
+    set CAM_INTERFACE ISP
 }
 
 #### Version Checking ##########################################################
@@ -49,7 +54,7 @@ puts stdout "srcRoot is ${srcRoot}"
 #return -code 1
 
 #set origin_dir "."
-set ProjectName Kria-${CAMERA}_test
+set ProjectName Kria-${CAMERA}
 set ProjectFolder $ProjectName
 set ProjectIPRepos ${srcRoot}/_ip_repos/
 
@@ -246,6 +251,10 @@ if {$::CAM_INTERFACE == "RPI"} {
     add_files -fileset constrs_1 -norecurse $srcRoot/constraints/kria_ias1_ar1335.xdc
     set_property used_in_synthesis false [get_files */kria_ias1_ar1335.xdc]
     set_property used_in_implementation true [get_files */kria_ias1_ar1335.xdc]
+} elseif {$::CAM_INTERFACE == "ISP"} {
+    add_files -fileset constrs_1 -norecurse $srcRoot/constraints/kria_isp_ar1335.xdc
+    set_property used_in_synthesis false [get_files */kria_isp_ar1335.xdc]
+    set_property used_in_implementation true [get_files */kria_isp_ar1335.xdc]
 }
 
 update_ip_catalog
@@ -302,55 +311,62 @@ if {$::JTAG2AXI == 1} {
 
 create_bd_cell -type ip -vlnv xilinx.com:ip:mipi_csi2_rx_subsystem:5.4 mipi_csi2_rx_subsyst_0
 
-create_bd_cell -type ip -vlnv xilinx.com:ip:axis_subset_converter:1.1 axis_subset_converter_0
-
-create_bd_cell -type ip -vlnv xilinx.com:ip:v_demosaic:1.1 v_demosaic_0
-
-create_bd_cell -type ip -vlnv xilinx.com:ip:v_gamma_lut:1.1 v_gamma_lut_0
-
-create_bd_cell -type ip -vlnv xilinx.com:ip:v_proc_ss:2.3 v_proc_ss_0
-set_property CONFIG.C_TOPOLOGY {3} [get_bd_cells v_proc_ss_0]
-
-create_bd_cell -type ip -vlnv xilinx.com:ip:v_proc_ss:2.3 v_proc_ss_1
-set_property -dict [list CONFIG.C_ENABLE_CSC {true} CONFIG.C_TOPOLOGY {0}] [get_bd_cells v_proc_ss_1]
-
 create_bd_cell -type ip -vlnv xilinx.com:ip:v_frmbuf_wr:2.5 v_frmbuf_wr_0
 set_property -dict [list CONFIG.HAS_BGR8 {1} CONFIG.HAS_BGRX8 {1} CONFIG.HAS_RGBX8 {1} CONFIG.HAS_UYVY8 {1} \
     CONFIG.HAS_Y8 {1} CONFIG.HAS_YUV8 {1} CONFIG.HAS_YUVX8 {1} CONFIG.HAS_YUYV8 {1} \
     CONFIG.HAS_Y_UV8 {1} CONFIG.HAS_Y_UV8_420 {1} CONFIG.HAS_Y_U_V8 {1} CONFIG.HAS_Y_U_V8_420 {1}] [get_bd_cells v_frmbuf_wr_0]
 
 make_bd_intf_pins_external  [get_bd_intf_pins mipi_csi2_rx_subsyst_0/mipi_phy_if]
-connect_bd_intf_net [get_bd_intf_pins mipi_csi2_rx_subsyst_0/video_out] [get_bd_intf_pins axis_subset_converter_0/S_AXIS]
-connect_bd_intf_net [get_bd_intf_pins axis_subset_converter_0/M_AXIS] [get_bd_intf_pins v_demosaic_0/s_axis_video]
-connect_bd_intf_net [get_bd_intf_pins v_demosaic_0/m_axis_video] [get_bd_intf_pins v_gamma_lut_0/s_axis_video]
-connect_bd_intf_net [get_bd_intf_pins v_gamma_lut_0/m_axis_video] [get_bd_intf_pins v_proc_ss_0/s_axis]
-connect_bd_intf_net [get_bd_intf_pins v_proc_ss_0/m_axis] [get_bd_intf_pins v_proc_ss_1/s_axis]
-connect_bd_intf_net [get_bd_intf_pins v_proc_ss_1/m_axis] [get_bd_intf_pins v_frmbuf_wr_0/s_axis_video]
 
-connect_bd_net [get_bd_pins cpu/pl_clk0] [get_bd_pins mipi_csi2_rx_subsyst_0/lite_aclk]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins mipi_csi2_rx_subsyst_0/video_aclk]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins axis_subset_converter_0/aclk]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins v_demosaic_0/ap_clk]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins v_gamma_lut_0/ap_clk]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins v_proc_ss_0/aclk]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins v_proc_ss_1/aclk_axis]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins v_proc_ss_1/aclk_ctrl]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins v_frmbuf_wr_0/ap_clk]
+create_bd_cell -type ip -vlnv xilinx.com:ip:axis_subset_converter:1.1 axis_subset_conv0
+connect_bd_intf_net [get_bd_intf_pins mipi_csi2_rx_subsyst_0/video_out] [get_bd_intf_pins axis_subset_conv0/S_AXIS]
 
 connect_bd_net [get_bd_pins cpu_clk/clk_out1] [get_bd_pins mipi_csi2_rx_subsyst_0/dphy_clk_200M]
 connect_ps2pl MASTER mipi_csi2_rx_subsyst_0 csirxss_s_axi
 connect_irq2ps mipi_csi2_rx_subsyst_0 csirxss_csi_irq 0
-connect_irq2ps v_demosaic_0 interrupt 0
-connect_irq2ps v_gamma_lut_0 interrupt 0
 connect_irq2ps v_frmbuf_wr_0 interrupt 0
-
 connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins mipi_csi2_rx_subsyst_0/lite_aresetn]
-#connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins axis_subset_converter_0/aresetn]
-#connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins v_demosaic_0/ap_rst_n]
-#connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins v_gamma_lut_0/ap_rst_n]
-#connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins v_proc_ss_0/aresetn]
-#connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins v_proc_ss_1/aresetn_ctrl]
-#connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins v_frmbuf_wr_0/ap_rst_n]
+
+#### Interconnect ####
+create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 vpss_interconnect
+set_property CONFIG.NUM_MI {2} [get_bd_cells vpss_interconnect]
+
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins cpu/maxihpm0_fpd_aclk]
+connect_bd_intf_net [get_bd_intf_pins cpu/M_AXI_HPM0_FPD] -boundary_type upper [get_bd_intf_pins vpss_interconnect/S00_AXI]
+
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/ACLK]
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/S00_ACLK]
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/M00_ACLK]
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/M01_ACLK]
+connect_bd_intf_net -boundary_type upper [get_bd_intf_pins vpss_interconnect/M00_AXI] [get_bd_intf_pins v_frmbuf_wr_0/s_axi_CTRL]
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins cpu/saxihpc0_fpd_aclk]
+
+connect_bd_net [get_bd_pins cpu/pl_clk0] [get_bd_pins mipi_csi2_rx_subsyst_0/lite_aclk]
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins mipi_csi2_rx_subsyst_0/video_aclk]
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins axis_subset_conv0/aclk]
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins v_frmbuf_wr_0/ap_clk]
+
+create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 isp_reset
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins isp_reset/slowest_sync_clk]
+connect_bd_net [get_bd_pins cpu/pl_resetn0] [get_bd_pins isp_reset/ext_reset_in]
+connect_bd_net [get_bd_pins isp_reset/peripheral_aresetn] [get_bd_pins axis_subset_conv0/aresetn]
+
+connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/ARESETN]
+connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/S00_ARESETN]
+connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/M00_ARESETN]
+connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/M01_ARESETN]
+
+create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 fb_interconnect
+set_property CONFIG.NUM_MI {1} [get_bd_cells fb_interconnect]
+set_property CONFIG.S00_HAS_DATA_FIFO {1} [get_bd_cells fb_interconnect]
+connect_bd_intf_net [get_bd_intf_pins v_frmbuf_wr_0/m_axi_mm_video] -boundary_type upper [get_bd_intf_pins fb_interconnect/S00_AXI]
+connect_bd_intf_net -boundary_type upper [get_bd_intf_pins fb_interconnect/M00_AXI] [get_bd_intf_pins cpu/S_AXI_HPC0_FPD]
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins fb_interconnect/ACLK]
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins fb_interconnect/S00_ACLK]
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins fb_interconnect/M00_ACLK]
+connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins fb_interconnect/ARESETN]
+connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins fb_interconnect/S00_ARESETN]
+connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins fb_interconnect/M00_ARESETN]
 
 create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_0
 set_property CONFIG.DIN_WIDTH {95} [get_bd_cells xlslice_0]
@@ -367,73 +383,88 @@ set_property CONFIG.DIN_WIDTH {95} [get_bd_cells xlslice_2]
 set_property -dict [list CONFIG.DIN_FROM {2} CONFIG.DIN_TO {2}] [get_bd_cells xlslice_2]
 connect_bd_net [get_bd_pins cpu/emio_gpio_o] [get_bd_pins xlslice_2/Din]
 
-create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_3
-set_property CONFIG.DIN_WIDTH {95} [get_bd_cells xlslice_3]
-set_property -dict [list CONFIG.DIN_FROM {3} CONFIG.DIN_TO {3}] [get_bd_cells xlslice_3]
-connect_bd_net [get_bd_pins cpu/emio_gpio_o] [get_bd_pins xlslice_3/Din]
-
-create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_4
-set_property CONFIG.DIN_WIDTH {95} [get_bd_cells xlslice_4]
-set_property -dict [list CONFIG.DIN_FROM {4} CONFIG.DIN_TO {4}] [get_bd_cells xlslice_4]
-connect_bd_net [get_bd_pins cpu/emio_gpio_o] [get_bd_pins xlslice_4/Din]
-
-create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_5
-set_property CONFIG.DIN_WIDTH {95} [get_bd_cells xlslice_5]
-set_property -dict [list CONFIG.DIN_FROM {5} CONFIG.DIN_TO {5}] [get_bd_cells xlslice_5]
-connect_bd_net [get_bd_pins cpu/emio_gpio_o] [get_bd_pins xlslice_5/Din]
-
 connect_bd_net [get_bd_pins xlslice_0/Dout] [get_bd_pins mipi_csi2_rx_subsyst_0/video_aresetn]
-connect_bd_net [get_bd_pins xlslice_1/Dout] [get_bd_pins v_demosaic_0/ap_rst_n]
-connect_bd_net [get_bd_pins xlslice_2/Dout] [get_bd_pins v_gamma_lut_0/ap_rst_n]
-connect_bd_net [get_bd_pins xlslice_3/Dout] [get_bd_pins v_proc_ss_0/aresetn]
-connect_bd_net [get_bd_pins xlslice_4/Dout] [get_bd_pins v_proc_ss_1/aresetn_ctrl]
-connect_bd_net [get_bd_pins xlslice_5/Dout] [get_bd_pins v_frmbuf_wr_0/ap_rst_n]
+connect_bd_net [get_bd_pins xlslice_1/Dout] [get_bd_pins v_frmbuf_wr_0/ap_rst_n]
 
-create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 vpss_interconnect
-set_property CONFIG.NUM_MI {5} [get_bd_cells vpss_interconnect]
+create_bd_cell -type ip -vlnv xilinx.com:ip:v_proc_ss:2.3 v_proc_ss_1
+set_property -dict [list CONFIG.C_ENABLE_CSC {true} CONFIG.C_TOPOLOGY {0}] [get_bd_cells v_proc_ss_1]
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins v_proc_ss_1/aclk_axis]
+connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins v_proc_ss_1/aclk_ctrl]
+connect_bd_net [get_bd_pins xlslice_2/Dout] [get_bd_pins v_proc_ss_1/aresetn_ctrl]
 
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins cpu/maxihpm0_fpd_aclk]
-connect_bd_intf_net [get_bd_intf_pins cpu/M_AXI_HPM0_FPD] -boundary_type upper [get_bd_intf_pins vpss_interconnect/S00_AXI]
+connect_bd_intf_net -boundary_type upper [get_bd_intf_pins vpss_interconnect/M01_AXI] [get_bd_intf_pins v_proc_ss_1/s_axi_ctrl]
 
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/ACLK]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/S00_ACLK]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/M00_ACLK]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/M01_ACLK]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/M02_ACLK]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/M03_ACLK]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/M04_ACLK]
-connect_bd_intf_net -boundary_type upper [get_bd_intf_pins vpss_interconnect/M00_AXI] [get_bd_intf_pins v_demosaic_0/s_axi_CTRL]
-connect_bd_intf_net -boundary_type upper [get_bd_intf_pins vpss_interconnect/M01_AXI] [get_bd_intf_pins v_gamma_lut_0/s_axi_CTRL]
-connect_bd_intf_net -boundary_type upper [get_bd_intf_pins vpss_interconnect/M02_AXI] [get_bd_intf_pins v_proc_ss_0/s_axi_ctrl]
-connect_bd_intf_net -boundary_type upper [get_bd_intf_pins vpss_interconnect/M03_AXI] [get_bd_intf_pins v_proc_ss_1/s_axi_ctrl]
-connect_bd_intf_net -boundary_type upper [get_bd_intf_pins vpss_interconnect/M04_AXI] [get_bd_intf_pins v_frmbuf_wr_0/s_axi_CTRL]
-#connect_bd_intf_net [get_bd_intf_pins v_frmbuf_wr_0/m_axi_mm_video] [get_bd_intf_pins cpu/S_AXI_HPC0_FPD]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins cpu/saxihpc0_fpd_aclk]
 
-create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 isp_reset
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins isp_reset/slowest_sync_clk]
-connect_bd_net [get_bd_pins cpu/pl_resetn0] [get_bd_pins isp_reset/ext_reset_in]
-connect_bd_net [get_bd_pins isp_reset/peripheral_aresetn] [get_bd_pins axis_subset_converter_0/aresetn]
+if {$::CAM_INTERFACE != "ISP"} {
+    create_bd_cell -type ip -vlnv xilinx.com:ip:v_demosaic:1.1 v_demosaic_0
 
-connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/ARESETN]
-connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/S00_ARESETN]
-connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/M00_ARESETN]
-connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/M01_ARESETN]
-connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/M02_ARESETN]
-connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/M03_ARESETN]
-connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/M04_ARESETN]
+    create_bd_cell -type ip -vlnv xilinx.com:ip:v_gamma_lut:1.1 v_gamma_lut_0
 
-create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 fb_interconnect
-set_property CONFIG.NUM_MI {1} [get_bd_cells fb_interconnect]
-set_property CONFIG.S00_HAS_DATA_FIFO {1} [get_bd_cells fb_interconnect]
-connect_bd_intf_net [get_bd_intf_pins v_frmbuf_wr_0/m_axi_mm_video] -boundary_type upper [get_bd_intf_pins fb_interconnect/S00_AXI]
-connect_bd_intf_net -boundary_type upper [get_bd_intf_pins fb_interconnect/M00_AXI] [get_bd_intf_pins cpu/S_AXI_HPC0_FPD]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins fb_interconnect/ACLK]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins fb_interconnect/S00_ACLK]
-connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins fb_interconnect/M00_ACLK]
-connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins fb_interconnect/ARESETN]
-connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins fb_interconnect/S00_ARESETN]
-connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins fb_interconnect/M00_ARESETN]
+    create_bd_cell -type ip -vlnv xilinx.com:ip:v_proc_ss:2.3 v_proc_ss_0
+    set_property CONFIG.C_TOPOLOGY {3} [get_bd_cells v_proc_ss_0]
+
+
+    connect_bd_intf_net [get_bd_intf_pins axis_subset_conv0/M_AXIS] [get_bd_intf_pins v_demosaic_0/s_axis_video]
+    connect_bd_intf_net [get_bd_intf_pins v_demosaic_0/m_axis_video] [get_bd_intf_pins v_gamma_lut_0/s_axis_video]
+    connect_bd_intf_net [get_bd_intf_pins v_gamma_lut_0/m_axis_video] [get_bd_intf_pins v_proc_ss_0/s_axis]
+    connect_bd_intf_net [get_bd_intf_pins v_proc_ss_0/m_axis] [get_bd_intf_pins v_proc_ss_1/s_axis]
+    connect_bd_intf_net [get_bd_intf_pins v_proc_ss_1/m_axis] [get_bd_intf_pins v_frmbuf_wr_0/s_axis_video]
+    
+    connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins v_demosaic_0/ap_clk]
+    connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins v_gamma_lut_0/ap_clk]
+    connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins v_proc_ss_0/aclk]
+
+    connect_irq2ps v_demosaic_0 interrupt 0
+    connect_irq2ps v_gamma_lut_0 interrupt 0
+    connect_irq2ps v_frmbuf_wr_0 interrupt 0
+    
+    #connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins axis_subset_conv0/aresetn]
+    #connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins v_demosaic_0/ap_rst_n]
+    #connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins v_gamma_lut_0/ap_rst_n]
+    #connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins v_proc_ss_0/aresetn]
+    #connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins v_proc_ss_1/aresetn_ctrl]
+    #connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins v_frmbuf_wr_0/ap_rst_n]
+        
+    create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_3
+    set_property CONFIG.DIN_WIDTH {95} [get_bd_cells xlslice_3]
+    set_property -dict [list CONFIG.DIN_FROM {3} CONFIG.DIN_TO {3}] [get_bd_cells xlslice_3]
+    connect_bd_net [get_bd_pins cpu/emio_gpio_o] [get_bd_pins xlslice_3/Din]
+    
+    create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_4
+    set_property CONFIG.DIN_WIDTH {95} [get_bd_cells xlslice_4]
+    set_property -dict [list CONFIG.DIN_FROM {4} CONFIG.DIN_TO {4}] [get_bd_cells xlslice_4]
+    connect_bd_net [get_bd_pins cpu/emio_gpio_o] [get_bd_pins xlslice_4/Din]
+    
+    create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_5
+    set_property CONFIG.DIN_WIDTH {95} [get_bd_cells xlslice_5]
+    set_property -dict [list CONFIG.DIN_FROM {5} CONFIG.DIN_TO {5}] [get_bd_cells xlslice_5]
+    connect_bd_net [get_bd_pins cpu/emio_gpio_o] [get_bd_pins xlslice_5/Din]
+
+    connect_bd_net [get_bd_pins xlslice_3/Dout] [get_bd_pins v_demosaic_0/ap_rst_n]
+    connect_bd_net [get_bd_pins xlslice_4/Dout] [get_bd_pins v_gamma_lut_0/ap_rst_n]
+    connect_bd_net [get_bd_pins xlslice_5/Dout] [get_bd_pins v_proc_ss_0/aresetn]
+    
+    #create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 vpss_interconnect
+    set_property CONFIG.NUM_MI {5} [get_bd_cells vpss_interconnect]
+    
+
+    connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/M02_ACLK]
+    connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/M03_ACLK]
+    connect_bd_net [get_bd_pins cpu_clk/clk_out2] [get_bd_pins vpss_interconnect/M04_ACLK]
+    connect_bd_intf_net -boundary_type upper [get_bd_intf_pins vpss_interconnect/M02_AXI] [get_bd_intf_pins v_demosaic_0/s_axi_CTRL]
+    connect_bd_intf_net -boundary_type upper [get_bd_intf_pins vpss_interconnect/M03_AXI] [get_bd_intf_pins v_gamma_lut_0/s_axi_CTRL]
+    connect_bd_intf_net -boundary_type upper [get_bd_intf_pins vpss_interconnect/M04_AXI] [get_bd_intf_pins v_proc_ss_0/s_axi_ctrl]
+
+    connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/M02_ARESETN]
+    connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/M03_ARESETN]
+    connect_bd_net [get_bd_pins isp_reset/interconnect_aresetn] [get_bd_pins vpss_interconnect/M04_ARESETN]
+
+} else {
+    
+    connect_bd_intf_net [get_bd_intf_pins axis_subset_conv0/M_AXIS] [get_bd_intf_pins v_proc_ss_1/s_axis]
+    connect_bd_intf_net [get_bd_intf_pins v_proc_ss_1/m_axis] [get_bd_intf_pins v_frmbuf_wr_0/s_axis_video]
+    
+}
 
 #return -code 1
 
@@ -448,7 +479,7 @@ set_property name IIC_CAM [get_bd_intf_ports IIC_0]
 #return -code 1
 
 group_bd_cells RESET_SLICE [get_bd_cells xlslice_0] [get_bd_cells xlslice_1] [get_bd_cells xlslice_2] [get_bd_cells xlslice_3] [get_bd_cells xlslice_4] [get_bd_cells xlslice_5]
-group_bd_cells ISP [get_bd_cells fb_interconnect]  [get_bd_cells isp_reset] [get_bd_cells v_proc_ss_1] [get_bd_cells mipi_csi2_rx_subsyst_0] [get_bd_cells RESET_SLICE] [get_bd_cells axis_subset_converter_0] [get_bd_cells v_frmbuf_wr_0] [get_bd_cells v_demosaic_0] [get_bd_cells concat_irq2ps0] [get_bd_cells v_gamma_lut_0] [get_bd_cells v_proc_ss_0] [get_bd_cells vpss_interconnect]
+group_bd_cells ISP [get_bd_cells fb_interconnect]  [get_bd_cells isp_reset] [get_bd_cells v_proc_ss_1] [get_bd_cells mipi_csi2_rx_subsyst_0] [get_bd_cells RESET_SLICE] [get_bd_cells axis_subset_conv0] [get_bd_cells v_frmbuf_wr_0] [get_bd_cells v_demosaic_0] [get_bd_cells concat_irq2ps0] [get_bd_cells v_gamma_lut_0] [get_bd_cells v_proc_ss_0] [get_bd_cells vpss_interconnect]
 
 regenerate_bd_layout
 save_bd_design
@@ -477,10 +508,10 @@ if {$::CAMERA == "RPI-IMX219"} {
     set_property -dict [list CONFIG.S_TDEST_WIDTH.VALUE_SRC USER CONFIG.M_HAS_TLAST.VALUE_SRC \
         USER CONFIG.S_HAS_TLAST.VALUE_SRC USER CONFIG.S_TUSER_WIDTH.VALUE_SRC \
         USER CONFIG.M_TUSER_WIDTH.VALUE_SRC USER CONFIG.M_TDATA_NUM_BYTES.VALUE_SRC \
-     USER CONFIG.M_TDEST_WIDTH.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_converter_0]
+     USER CONFIG.M_TDEST_WIDTH.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
     
     set_property -dict [list CONFIG.M_HAS_TLAST {1} CONFIG.M_TDEST_WIDTH {10} CONFIG.M_TUSER_WIDTH {1} CONFIG.S_HAS_TLAST {1} \
-        CONFIG.S_TDEST_WIDTH {10} CONFIG.S_TUSER_WIDTH {1} CONFIG.TDEST_REMAP {tdest[9:0]}] [get_bd_cells ISP/axis_subset_converter_0]
+        CONFIG.S_TDEST_WIDTH {10} CONFIG.S_TUSER_WIDTH {1} CONFIG.TDEST_REMAP {tdest[9:0]}] [get_bd_cells ISP/axis_subset_conv0]
     
     set_property -dict [list CONFIG.MAX_DATA_WIDTH {8} CONFIG.SAMPLES_PER_CLOCK {1} CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_demosaic_0]
     set_property -dict [list CONFIG.MAX_DATA_WIDTH {8} CONFIG.SAMPLES_PER_CLOCK {1} CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_gamma_lut_0]
@@ -499,15 +530,14 @@ if {$::CAMERA == "IAS-AR1335"} {
     set_property CONFIG.C_CSI_EN_CRC {false} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
     set_property CONFIG.C_CSI_EN_ACTIVELANES {false} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
     
-    set_property -dict [list CONFIG.S_TDATA_NUM_BYTES.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_converter_0]
+    set_property -dict [list CONFIG.S_TDATA_NUM_BYTES.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
     set_property -dict [list CONFIG.S_TDEST_WIDTH.VALUE_SRC USER CONFIG.M_HAS_TLAST.VALUE_SRC \
         USER CONFIG.S_HAS_TLAST.VALUE_SRC USER CONFIG.S_TUSER_WIDTH.VALUE_SRC \
         USER CONFIG.M_TUSER_WIDTH.VALUE_SRC USER CONFIG.M_TDATA_NUM_BYTES.VALUE_SRC \
-     USER CONFIG.M_TDEST_WIDTH.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_converter_0]
-    
-    
+     USER CONFIG.M_TDEST_WIDTH.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
+        
     set_property -dict [list CONFIG.M_HAS_TLAST {1} CONFIG.M_TDEST_WIDTH {10} CONFIG.M_TUSER_WIDTH {1} CONFIG.S_HAS_TLAST {1} \
-        CONFIG.S_TDEST_WIDTH {10} CONFIG.S_TUSER_WIDTH {1} CONFIG.TDEST_REMAP {tdest[9:0]}] [get_bd_cells ISP/axis_subset_converter_0]
+        CONFIG.S_TDEST_WIDTH {10} CONFIG.S_TUSER_WIDTH {1} CONFIG.TDEST_REMAP {tdest[9:0]}] [get_bd_cells ISP/axis_subset_conv0]
     
     set_property -dict [list CONFIG.MAX_DATA_WIDTH {8} CONFIG.SAMPLES_PER_CLOCK {1} CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_demosaic_0]
     set_property -dict [list CONFIG.MAX_DATA_WIDTH {8} CONFIG.SAMPLES_PER_CLOCK {1} CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_gamma_lut_0]
@@ -526,8 +556,8 @@ if {$::CAMERA == "IAS-AR1335"} {
 
     if {$::MODE == "4K-UHD"} {
 
-        set_property -dict [list CONFIG.S_TDATA_NUM_BYTES {3} CONFIG.M_TDATA_NUM_BYTES {2}] [get_bd_cells ISP/axis_subset_converter_0]
-        set_property -dict [list CONFIG.TDATA_REMAP {tdata[19:12],tdata[9:2]}] [get_bd_cells ISP/axis_subset_converter_0]
+        set_property -dict [list CONFIG.S_TDATA_NUM_BYTES {3} CONFIG.M_TDATA_NUM_BYTES {2}] [get_bd_cells ISP/axis_subset_conv0]
+        set_property -dict [list CONFIG.TDATA_REMAP {tdata[19:12],tdata[9:2]}] [get_bd_cells ISP/axis_subset_conv0]
         
         set_property CONFIG.C_CSI_FILTER_USERDATATYPE {true} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
         set_property CONFIG.CMN_NUM_PIXELS {2} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
@@ -540,8 +570,8 @@ if {$::CAMERA == "IAS-AR1335"} {
         
     } else {
         
-        set_property -dict [list CONFIG.S_TDATA_NUM_BYTES {2} CONFIG.M_TDATA_NUM_BYTES {1}] [get_bd_cells ISP/axis_subset_converter_0]
-        set_property -dict [list CONFIG.TDATA_REMAP {tdata[9:2]}] [get_bd_cells ISP/axis_subset_converter_0]
+        set_property -dict [list CONFIG.S_TDATA_NUM_BYTES {2} CONFIG.M_TDATA_NUM_BYTES {1}] [get_bd_cells ISP/axis_subset_conv0]
+        set_property -dict [list CONFIG.TDATA_REMAP {tdata[9:2]}] [get_bd_cells ISP/axis_subset_conv0]
         
         set_property CONFIG.C_CSI_FILTER_USERDATATYPE {false} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
         set_property -dict [list CONFIG.CSI_BUF_DEPTH {2048}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
@@ -553,22 +583,87 @@ if {$::CAMERA == "IAS-AR1335"} {
         
     }
     
+}
 
-
+if {$::CAMERA == "ISP-AR1335"} {
+    
+    #return -code 1
+    
+    if {$::MODE == "FullHD"} {
+        
+        set_property -dict [list CONFIG.SupportLevel {1}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+        set_property -dict [list CONFIG.DPHYRX_BOARD_INTERFACE {som240_1_connector_mipi_csi_isp}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+        set_property -dict [list CONFIG.CMN_PXL_FORMAT {YUV422_8bit} CONFIG.CMN_VC {0} CONFIG.CSI_BUF_DEPTH {4096}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+        set_property -dict [list CONFIG.C_CSI_EN_ACTIVELANES {true} CONFIG.C_CSI_FILTER_USERDATATYPE {true} CONFIG.DPY_LINE_RATE {896}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+        #save_bd_design
+        
+        set_property -dict [list CONFIG.S_TDATA_NUM_BYTES.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
+        set_property CONFIG.S_TDATA_NUM_BYTES {2} [get_bd_cells ISP/axis_subset_conv0]
+        
+        set_property -dict [list CONFIG.M_TDATA_NUM_BYTES.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
+        set_property CONFIG.M_TDATA_NUM_BYTES {3} [get_bd_cells ISP/axis_subset_conv0]
+        
+        set_property -dict [list CONFIG.TDATA_REMAP {8'b00000000,tdata[15:0]}] [get_bd_cells ISP/axis_subset_conv0]
+        
+        set_property -dict [list CONFIG.M_TDEST_WIDTH.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
+        set_property -dict [list CONFIG.M_TDEST_WIDTH {0} CONFIG.TDEST_REMAP {1'b0}] [get_bd_cells ISP/axis_subset_conv0]
+        
+        #save_bd_design
+        
+        #set_property -dict [list CONFIG.M_TDEST_WIDTH.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
+        #set_property -dict [list CONFIG.M_TDEST_WIDTH {1} CONFIG.TDEST_REMAP {1'b0}] [get_bd_cells ISP/axis_subset_conv0]
+        
+        set_property -dict [list CONFIG.C_MAX_DATA_WIDTH {8} CONFIG.C_SAMPLES_PER_CLK {1} CONFIG.C_MAX_COLS {1920} CONFIG.C_MAX_ROWS {1080}] [get_bd_cells ISP/v_proc_ss_1]
+        set_property -dict [list CONFIG.C_COLORSPACE_SUPPORT {0} CONFIG.C_SCALER_ALGORITHM {2}] [get_bd_cells ISP/v_proc_ss_1]
+        set_property -dict [list CONFIG.AXIMM_ADDR_WIDTH {64} CONFIG.SAMPLES_PER_CLOCK {1}  CONFIG.MAX_COLS {1920} CONFIG.MAX_ROWS {1080}] [get_bd_cells ISP/v_frmbuf_wr_0]
+        
+    } else {
+        
+    }
+        
+    create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 ISP/xlslice_isp_reset
+    set_property -dict [list CONFIG.DIN_FROM {6} CONFIG.DIN_TO {6} CONFIG.DIN_WIDTH {95}] [get_bd_cells ISP/xlslice_isp_reset]
+    connect_bd_net [get_bd_pins ISP/Din] [get_bd_pins ISP/xlslice_isp_reset/Din]
+    make_bd_pins_external  [get_bd_pins ISP/xlslice_isp_reset/Dout]
+    set_property name IAS0_RST [get_bd_ports Dout_0]
+    
+    create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 ISP/xlslice_isp_stndby
+    set_property -dict [list CONFIG.DIN_FROM {7} CONFIG.DIN_TO {7} CONFIG.DIN_WIDTH {95}] [get_bd_cells ISP/xlslice_isp_stndby]
+    connect_bd_net [get_bd_pins ISP/Din] [get_bd_pins ISP/xlslice_isp_stndby/Din]
+    make_bd_pins_external  [get_bd_pins ISP/xlslice_isp_stndby/Dout]
+    set_property name IAS0_STDBY [get_bd_ports Dout_0]
     
 }
 
-assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs iic2cam/S_AXI/Reg] -force
-assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/mipi_csi2_rx_subsyst_0/csirxss_s_axi/Reg] -force
-assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_demosaic_0/s_axi_CTRL/Reg] -force
-assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_frmbuf_wr_0/s_axi_CTRL/Reg] -force
-assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_gamma_lut_0/s_axi_CTRL/Reg] -force
-assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_proc_ss_0/s_axi_ctrl/Reg] -force
-assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_proc_ss_1/s_axi_ctrl/Reg] -force
-assign_bd_address -target_address_space /ISP/v_frmbuf_wr_0/Data_m_axi_mm_video [get_bd_addr_segs cpu/SAXIGP0/HPC0_DDR_LOW] -force
-exclude_bd_addr_seg [get_bd_addr_segs cpu/SAXIGP0/HPC0_QSPI] -target_address_space [get_bd_addr_spaces ISP/v_frmbuf_wr_0/Data_m_axi_mm_video]
-exclude_bd_addr_seg [get_bd_addr_segs cpu/SAXIGP0/HPC0_DDR_HIGH] -target_address_space [get_bd_addr_spaces ISP/v_frmbuf_wr_0/Data_m_axi_mm_video]
-exclude_bd_addr_seg [get_bd_addr_segs cpu/SAXIGP0/HPC0_LPS_OCM] -target_address_space [get_bd_addr_spaces ISP/v_frmbuf_wr_0/Data_m_axi_mm_video]
+if { ($::CAMERA == "RPI-IMX219") || ($::CAMERA == "IAS-AR1335")} {
+
+    assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs iic2cam/S_AXI/Reg] -force
+    assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/mipi_csi2_rx_subsyst_0/csirxss_s_axi/Reg] -force
+    assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_demosaic_0/s_axi_CTRL/Reg] -force
+    assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_frmbuf_wr_0/s_axi_CTRL/Reg] -force
+    assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_gamma_lut_0/s_axi_CTRL/Reg] -force
+    assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_proc_ss_0/s_axi_ctrl/Reg] -force
+    assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_proc_ss_1/s_axi_ctrl/Reg] -force
+    assign_bd_address -target_address_space /ISP/v_frmbuf_wr_0/Data_m_axi_mm_video [get_bd_addr_segs cpu/SAXIGP0/HPC0_DDR_LOW] -force
+    exclude_bd_addr_seg [get_bd_addr_segs cpu/SAXIGP0/HPC0_QSPI] -target_address_space [get_bd_addr_spaces ISP/v_frmbuf_wr_0/Data_m_axi_mm_video]
+    exclude_bd_addr_seg [get_bd_addr_segs cpu/SAXIGP0/HPC0_DDR_HIGH] -target_address_space [get_bd_addr_spaces ISP/v_frmbuf_wr_0/Data_m_axi_mm_video]
+    exclude_bd_addr_seg [get_bd_addr_segs cpu/SAXIGP0/HPC0_LPS_OCM] -target_address_space [get_bd_addr_spaces ISP/v_frmbuf_wr_0/Data_m_axi_mm_video]
+    
+} elseif { $::CAMERA == "ISP-AR1335" } {
+    
+    assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs iic2cam/S_AXI/Reg] -force
+    assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/mipi_csi2_rx_subsyst_0/csirxss_s_axi/Reg] -force
+    #assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_demosaic_0/s_axi_CTRL/Reg] -force
+    assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_frmbuf_wr_0/s_axi_CTRL/Reg] -force
+    #assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_gamma_lut_0/s_axi_CTRL/Reg] -force
+    #assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_proc_ss_0/s_axi_ctrl/Reg] -force
+    assign_bd_address -target_address_space /cpu/Data [get_bd_addr_segs ISP/v_proc_ss_1/s_axi_ctrl/Reg] -force
+    assign_bd_address -target_address_space /ISP/v_frmbuf_wr_0/Data_m_axi_mm_video [get_bd_addr_segs cpu/SAXIGP0/HPC0_DDR_LOW] -force
+    exclude_bd_addr_seg [get_bd_addr_segs cpu/SAXIGP0/HPC0_QSPI] -target_address_space [get_bd_addr_spaces ISP/v_frmbuf_wr_0/Data_m_axi_mm_video]
+    exclude_bd_addr_seg [get_bd_addr_segs cpu/SAXIGP0/HPC0_DDR_HIGH] -target_address_space [get_bd_addr_spaces ISP/v_frmbuf_wr_0/Data_m_axi_mm_video]
+    exclude_bd_addr_seg [get_bd_addr_segs cpu/SAXIGP0/HPC0_LPS_OCM] -target_address_space [get_bd_addr_spaces ISP/v_frmbuf_wr_0/Data_m_axi_mm_video]
+    
+}
 
 #return -code 1
 
