@@ -7,8 +7,8 @@
 #set CAMERA IAS-AR1335
 set CAMERA ISP-AR1335
 
-set MODE FullHD
-#set MODE 4K-UHD
+#set MODE FullHD
+set MODE 4K-UHD
 
 set JTAG2AXI 1
 set EMMC 1
@@ -589,38 +589,31 @@ if {$::CAMERA == "ISP-AR1335"} {
     
     #return -code 1
     
-    if {$::MODE == "FullHD"} {
-        
-        set_property -dict [list CONFIG.SupportLevel {1}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
-        set_property -dict [list CONFIG.DPHYRX_BOARD_INTERFACE {som240_1_connector_mipi_csi_isp}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
-        set_property -dict [list CONFIG.CMN_PXL_FORMAT {YUV422_8bit} CONFIG.CMN_VC {0} CONFIG.CSI_BUF_DEPTH {4096}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
-        set_property -dict [list CONFIG.C_CSI_EN_ACTIVELANES {true} CONFIG.C_CSI_FILTER_USERDATATYPE {true} CONFIG.DPY_LINE_RATE {896}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
-        #save_bd_design
-        
-        set_property -dict [list CONFIG.S_TDATA_NUM_BYTES.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
-        set_property CONFIG.S_TDATA_NUM_BYTES {2} [get_bd_cells ISP/axis_subset_conv0]
-        
-        set_property -dict [list CONFIG.M_TDATA_NUM_BYTES.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
-        set_property CONFIG.M_TDATA_NUM_BYTES {3} [get_bd_cells ISP/axis_subset_conv0]
-        
-        set_property -dict [list CONFIG.TDATA_REMAP {8'b00000000,tdata[15:0]}] [get_bd_cells ISP/axis_subset_conv0]
-        
-        set_property -dict [list CONFIG.M_TDEST_WIDTH.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
-        set_property -dict [list CONFIG.M_TDEST_WIDTH {0} CONFIG.TDEST_REMAP {1'b0}] [get_bd_cells ISP/axis_subset_conv0]
-        
-        #save_bd_design
-        
-        #set_property -dict [list CONFIG.M_TDEST_WIDTH.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
-        #set_property -dict [list CONFIG.M_TDEST_WIDTH {1} CONFIG.TDEST_REMAP {1'b0}] [get_bd_cells ISP/axis_subset_conv0]
-        
-        set_property -dict [list CONFIG.C_MAX_DATA_WIDTH {8} CONFIG.C_SAMPLES_PER_CLK {1} CONFIG.C_MAX_COLS {1920} CONFIG.C_MAX_ROWS {1080}] [get_bd_cells ISP/v_proc_ss_1]
-        set_property -dict [list CONFIG.C_COLORSPACE_SUPPORT {0} CONFIG.C_SCALER_ALGORITHM {2}] [get_bd_cells ISP/v_proc_ss_1]
-        set_property -dict [list CONFIG.AXIMM_ADDR_WIDTH {64} CONFIG.SAMPLES_PER_CLOCK {1}  CONFIG.MAX_COLS {1920} CONFIG.MAX_ROWS {1080}] [get_bd_cells ISP/v_frmbuf_wr_0]
-        
-    } else {
-        
-    }
-        
+    set_property -dict [list CONFIG.SupportLevel {1}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+    set_property -dict [list CONFIG.DPHYRX_BOARD_INTERFACE {som240_1_connector_mipi_csi_isp}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+    set_property -dict [list CONFIG.CMN_PXL_FORMAT {YUV422_8bit} CONFIG.CMN_VC {0} CONFIG.CSI_BUF_DEPTH {8192}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+    set_property -dict [list CONFIG.C_CSI_EN_ACTIVELANES {true} CONFIG.C_CSI_FILTER_USERDATATYPE {true} CONFIG.DPY_LINE_RATE {896}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+    set_property -dict [list  CONFIG.CMN_NUM_PIXELS {2}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+    
+    #save_bd_design
+    
+    set_property -dict [list CONFIG.S_TDATA_NUM_BYTES.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
+    set_property CONFIG.S_TDATA_NUM_BYTES {4} [get_bd_cells ISP/axis_subset_conv0]
+    
+    set_property -dict [list CONFIG.M_TDATA_NUM_BYTES.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
+    set_property CONFIG.M_TDATA_NUM_BYTES {6} [get_bd_cells ISP/axis_subset_conv0]
+    
+    #set_property -dict [list CONFIG.TDATA_REMAP {8'b00000000,tdata[15:0]}] [get_bd_cells ISP/axis_subset_conv0]
+    set_property -dict [list CONFIG.TDATA_REMAP {16'b00000000,tdata[31:0]}] [get_bd_cells ISP/axis_subset_conv0]
+    
+    set_property -dict [list CONFIG.M_TDEST_WIDTH.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
+    set_property -dict [list CONFIG.M_TDEST_WIDTH {1}] [get_bd_cells ISP/axis_subset_conv0]
+    
+    set_property -dict [list CONFIG.C_MAX_DATA_WIDTH {8} CONFIG.C_SAMPLES_PER_CLK {2} CONFIG.C_MAX_COLS {8192} CONFIG.C_MAX_ROWS {4320}] [get_bd_cells ISP/v_proc_ss_1]
+    set_property -dict [list CONFIG.C_COLORSPACE_SUPPORT {0} CONFIG.C_SCALER_ALGORITHM {2}] [get_bd_cells ISP/v_proc_ss_1]
+    set_property -dict [list CONFIG.AXIMM_ADDR_WIDTH {64} CONFIG.SAMPLES_PER_CLOCK {2}  CONFIG.MAX_COLS {8192} CONFIG.MAX_ROWS {4320}] [get_bd_cells ISP/v_frmbuf_wr_0]
+
+    ###################
     create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 ISP/xlslice_isp_reset
     set_property -dict [list CONFIG.DIN_FROM {6} CONFIG.DIN_TO {6} CONFIG.DIN_WIDTH {95}] [get_bd_cells ISP/xlslice_isp_reset]
     connect_bd_net [get_bd_pins ISP/Din] [get_bd_pins ISP/xlslice_isp_reset/Din]
