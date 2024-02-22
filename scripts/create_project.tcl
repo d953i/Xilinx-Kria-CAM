@@ -1,11 +1,15 @@
 
+#
+# To create Vivado project run create_project.tcl in Vivado "Tcl Console"
+#
 # source D:/Projects/_github/Xilinx-Kria-CAM/scripts/create_project.tcl
+#
 
 ########################### Project Configuration ##############################
 
 #set CAMERA RPI-IMX219
-#set CAMERA IAS-AR1335
-set CAMERA ISP-AR1335
+set CAMERA IAS-AR1335
+#set CAMERA ISP-AR1335
 
 #set MODE FullHD
 set MODE 4K-UHD
@@ -416,7 +420,7 @@ if {$::CAM_INTERFACE != "ISP"} {
 
     connect_irq2ps v_demosaic_0 interrupt 0
     connect_irq2ps v_gamma_lut_0 interrupt 0
-    connect_irq2ps v_frmbuf_wr_0 interrupt 0
+    #connect_irq2ps v_frmbuf_wr_0 interrupt 0
     
     #connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins axis_subset_conv0/aresetn]
     #connect_bd_net [get_bd_pins cpu_rst/peripheral_aresetn] [get_bd_pins v_demosaic_0/ap_rst_n]
@@ -558,15 +562,17 @@ if {$::CAMERA == "IAS-AR1335"} {
 
         set_property -dict [list CONFIG.S_TDATA_NUM_BYTES {3} CONFIG.M_TDATA_NUM_BYTES {2}] [get_bd_cells ISP/axis_subset_conv0]
         set_property -dict [list CONFIG.TDATA_REMAP {tdata[19:12],tdata[9:2]}] [get_bd_cells ISP/axis_subset_conv0]
+        set_property -dict [list CONFIG.M_TDEST_WIDTH.VALUE_SRC USER] [get_bd_cells ISP/axis_subset_conv0]
+        set_property -dict [list CONFIG.M_TDEST_WIDTH {1}] [get_bd_cells ISP/axis_subset_conv0]
         
         set_property CONFIG.C_CSI_FILTER_USERDATATYPE {true} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
         set_property CONFIG.CMN_NUM_PIXELS {2} [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
-        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {2} CONFIG.CSI_BUF_DEPTH {4096}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
-        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {2} CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_demosaic_0]
-        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {2} CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_gamma_lut_0]
-        set_property -dict [list CONFIG.C_SAMPLES_PER_CLK {2} CONFIG.C_MAX_COLS {3840} CONFIG.C_MAX_ROWS {2160}] [get_bd_cells ISP/v_proc_ss_0]
-        set_property -dict [list CONFIG.C_SAMPLES_PER_CLK {2} CONFIG.C_MAX_COLS {3840} CONFIG.C_MAX_ROWS {2160}] [get_bd_cells ISP/v_proc_ss_1]
-        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {2}  CONFIG.MAX_COLS {3840} CONFIG.MAX_ROWS {2160}] [get_bd_cells ISP/v_frmbuf_wr_0]
+        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {2} CONFIG.CSI_BUF_DEPTH {8192}] [get_bd_cells ISP/mipi_csi2_rx_subsyst_0]
+        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {2} CONFIG.MAX_COLS {8192} CONFIG.MAX_ROWS {4320}] [get_bd_cells ISP/v_demosaic_0]
+        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {2} CONFIG.MAX_COLS {8192} CONFIG.MAX_ROWS {4320}] [get_bd_cells ISP/v_gamma_lut_0]
+        set_property -dict [list CONFIG.C_SAMPLES_PER_CLK {2} CONFIG.C_MAX_COLS {8192} CONFIG.C_MAX_ROWS {4320}] [get_bd_cells ISP/v_proc_ss_0]
+        set_property -dict [list CONFIG.C_SAMPLES_PER_CLK {2} CONFIG.C_MAX_COLS {8192} CONFIG.C_MAX_ROWS {4320}] [get_bd_cells ISP/v_proc_ss_1]
+        set_property -dict [list CONFIG.SAMPLES_PER_CLOCK {2}  CONFIG.MAX_COLS {8192} CONFIG.MAX_ROWS {4320}] [get_bd_cells ISP/v_frmbuf_wr_0]
         
     } else {
         
